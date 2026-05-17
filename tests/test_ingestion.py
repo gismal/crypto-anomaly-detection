@@ -9,15 +9,15 @@ def run_test():
     logger.info("Connectiong to Binance...")
     streamer.connect()
     
-    logger.log(" ----- Live Data (10 Secs) -------")
+    logger.info(" ----- Live Data (10 Secs) -------")
     start_time = time.time()
     
     try:
         while time.time() - start_time < 10:
-            datapoint = streamer.get_next_tick()
+            datapoint = streamer.get_next()
             
             if datapoint:
-                logger.log(f"Data Received: {datapoint}")
+                logger.info(f"Data Received: {datapoint}")
                 
             time.sleep(0.5)
             
@@ -25,7 +25,7 @@ def run_test():
         logger.info("Test interrupted by user")
     finally:
         streamer.close()
-        logger.log("------ Test Completed -------")
+        logger.info("------ Test Completed -------")
             
 if __name__ == "__main__":
     run_test()    
