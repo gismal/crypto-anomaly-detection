@@ -19,7 +19,7 @@ def main():
     
     streamer = BinanceStreamer()
     engine = FeatureEngine(window_size=60) 
-    model = AnomalyDetector(warmup_period= 60 , contamination= 0.01)
+    model = AnomalyDetector(warmup_period= 60 , contamination= 0.0001)
     
     csv_logger = CSVLogger()
     notifier = DiscordNotifier()
@@ -28,12 +28,20 @@ def main():
     processed_ticks = 0
     HEARTBEAT_INTERVAL = 50
     
+    last_process_time = 0
+    
     try:
         while True:
             data = streamer.get_next()
             if not data or data.get("price") is None:
-                time.sleep(0.1)
+                time.sleep(0.01)
                 continue
+            
+            current_time = time.time()
+            if current_time - last_process_time < 1.0:
+                continue
+            
+            last_process_time = current_time
             
             price = data.get("price")
             processed_ticks += 1

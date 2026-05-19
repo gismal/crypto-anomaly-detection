@@ -70,3 +70,25 @@ class DiscordNotifier:
         except requests.exceptions.RequestException as e:
             logger.error(f"Discord Error: {e}")    
         
+    def send_heartbeat(self, processed_ticks: int):
+        """Sends a periodic status update to ensure the bot is alive."""
+        payload = {
+            "username": "Crypto Anomaly Bot",
+            "avatar_url": "https://i.postimg.cc/prWBDtnN/Adsiz.png",
+            "embeds": [{
+                "title": "🟢 Sistem Aktif (Heartbeat)",
+                "color": 65280,
+                "description": f"Bot sorunsuz şekilde çalışmaya devam ediyor.\n\n📊 **İşlenen Toplam Veri:** `{processed_ticks}`",
+                "footer": {"text": "System Health Monitor"}
+            }]
+        }
+        
+        if not self.webhook_url:
+            logger.info(f"[SIMULATION] Heartbeat Gönderildi. İşlenen Veri: {processed_ticks}")
+            return
+            
+        try:
+            response = requests.post(self.webhook_url, json=payload, timeout=5)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Heartbeat gönderim hatası: {e}")
