@@ -1,5 +1,5 @@
 import pandas as pd 
-from collection import deque
+from collections import deque
 from typing import Dict, Optional
 from src.config import WINDOW_SIZE
 
