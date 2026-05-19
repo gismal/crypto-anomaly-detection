@@ -1,67 +1,69 @@
-from abc import ABC, abstractmethod
-import json 
-from typing import Dict, Any, Optional
-from unicorn_binance_websocket_api.manager import BinanceWebSocketApiManager
-from src.config import logger, SYMBOL
+import json
+import websocket
+import threading
+from queue import Queue
+from src.config import logger
 
-class DataStreamer(ABC):
+class BinanceStreamer:
     """
-    Abstract Base Class for all data streaming sources
-    ABC applied for possible future extensions (new markets etc. )
-    This interface ensures that any new exchange added to the system implements the necesarry methods for the pipeline to functions
+    Connect to the Binance WebSocket API to stream live trade data
+    Runs in a background thread to prevent blocking the main pipeline
     """
-    @abstractmethod
-    def connect(self) -> None:
-        """ Establishes connection to the data source """
-        pass
-    
-    @abstractmethod
-    def get_next(self) -> Optional[Dict[str, Any]]:
-        """ Retrieves the next processed data point """
-        pass
-    
-    @abstractmethod
-    def close(self) -> None:
-        """ Safely terminates the connection """
+    def __init__(self, symbol="btcusdt"):
+        """
+        Initializes the Binance Streamer
+        Args:
+            - symbol (str): The trading pair symbol to stream (default is "btcusdt)
         
-class BinanceStreamer(DataStreamer):
-    """
-    Binance specific implementation of the DataStreamer
-    
-    Uses high performance WebSocket bia unicorn-binance-websocket-api
-    """
-    
-    def __init__(self, symbol: str = SYMBOL):
+        """
+        
         self.symbol = symbol
-        self.manager = None
+        self.url = f"wss://stream.binance.com:9443/ws/{self.symbol}@trade"
+        self.queue = Queue(maxsize=100)
+        self.ws = None
         
-    def connect(self) -> None:
+        # Another thread to not interrupt the main stream
+        self.thread = threading.Thread(target=self._start_ws)
+        self.thread.daemon = True
+        self.thread.start()
+
+    def _on_message(self, ws, message):
+        """
+        Callback function for incoming WebSocket messages
+        Parses the JSON payload and puts the price data into the queue
+        """
         try:
-            self.manager = BinanceWebSocketApiManager(exchange= "binance.com")
-            self.manager.create_stream(["ticker"], [self.symbol])
-            logger.info(f"Binance WebSocket connected for {self.symbol.upper()}.")
+            data = json.loads(message)
+            if 'p' in data:  
+                self.queue.put({"price": float(data['p'])})
         except Exception as e:
-            logger.error(f"Binance connection error: {e}")
-            
-    def get_next(self) -> Optional[Dict[str, Any]]:
-        if not self.manager:
-            return None
+            logger.error(f"Veri ayrıştırma hatası: {e}")
+
+    def _on_error(self, ws, error):
+        """ Callback function to handle and log WebSocket errors """
+        logger.error(f"WebSocket Error: {error}")
+
+    def _start_ws(self):
+        """ Internal method to run the WebSocket conncection indefinetely """
+        self.ws = websocket.WebSocketApp(
+            self.url,
+            on_message=self._on_message,
+            on_error=self._on_error
+        )
+        self.ws.run_forever()
+
+    def get_next(self):
+        """ 
+        Retries the next available price tick from the queue
         
-        raw_data = self.manager.pop_stream_data_from_stream_buffer()
-        
-        if raw_data:
-            data = json.loads(raw_data) if isinstance(raw_data, str) else raw_data
-            
-            # Standardization: always return the same structure
-            if 'data' in data and 'c' in data['data']:
-                return {
-                    "time": int(data['data']['E']),
-                    "price": float(data['data']['c'])
-                }  
+        Returns:
+            - dict: A dictionary containing the price or None if the queue is empty
+        """
+        if not self.queue.empty():
+            return self.queue.get()
         return None
-    
-    def close(self) -> None:
-        if self.manager:
-            self.manager.stop_manager_with_all_streams()
-            logger.info("Binance connection closed")
-    
+
+    def stop(self):
+        """ Closes the WebSocket connection and stops the background thread gracefully"""
+        if self.ws:
+            self.ws.close()

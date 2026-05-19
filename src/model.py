@@ -95,7 +95,7 @@ class AnomalyDetector:
             logger.info(f"Retraining model to adapt to recent market drift (Count: {self.prediction_count})...")
             # Keep buffer size optimal to precent memory leaks (keep last 2000 points)
             if len(self.buffer) > 2000:
-                self.buffer = self.buffer[-2000]
+                self.buffer = self.buffer[-2000:]
             self.model.fit(self.buffer)
         
         return prediction, score, reason        

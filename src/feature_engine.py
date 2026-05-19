@@ -1,5 +1,5 @@
 import pandas as pd 
-from collection import deque
+from collections import deque
 from typing import Dict, Optional
 from src.config import WINDOW_SIZE
 
@@ -12,7 +12,7 @@ class FeatureEngine:
     def update_window(self, price: float) -> None:
         self.price_history.append(price)
         
-    def get_current_feature(self) -> Optional[Dict[str, float]]:
+    def get_current_features(self) -> Optional[Dict[str, float]]:
         """
         Calculates statistical and financial features based on the current price window
         
