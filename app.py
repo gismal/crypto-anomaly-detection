@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import time
 import os
 
 st.set_page_config(page_title= "Crypto Anomaly Dashboard", layout= "wide")
@@ -22,34 +21,33 @@ def load_data():
     except Exception:
         # Return an empty DataFrame if something goes wrong
         return pd.DataFrame()
-    
- # placeholders for live layout
-chart_placeholder = st.empty()
-table_placeholder = st.empty()
-    
-    
-# infinite loop for live updates
-while True:
+
+# This fragment updates itself every 5 secs dynamically    
+@st.fragment(run_every= 5)
+def live_dashboard():
     df = load_data()
-        
     if not df.empty:
-        # get the last 100 records for visuals
         recent_df = df.tail(100)
-            
-        with chart_placeholder.container():
-            st.subheader("Anomaly Price Chart")    
-            # line chart: X axis is time, Y axis is price
-            chart_data = recent_df.set_index("timestamp")["price"]
-            st.line_chart(chart_data)
-            
-        with table_placeholder.container():
-            st.subheader("Recent Anomalies")
-            display_df = recent_df.sort_values(by="timestamp", ascending= False)
-            st.dataframe(display_df, use_container_width= True)
-            
+        latest_anomaly = df.iloc[-1]
+        
+        # KPI Metrics
+        kpi1, kpi2, kpi3 = st.columns(3)
+        kpi1.metric(label="Total Anomalies", value=len(df))
+        kpi2.metric(label="Latest Price", value=f"${latest_anomaly['price']:.2f}")
+        kpi3.metric(label="Latest Score", value=f"{latest_anomaly['prediction_score']:.4f}")
+        st.markdown("---")
+        
+        # 2. Chart
+        st.subheader("Anomaly Price Chart")
+        chart_data = recent_df.set_index("timestamp")["price"]
+        st.line_chart(chart_data)
+        
+        # 3. Table
+        st.subheader("Recent Anomalies")
+        display_df = recent_df.sort_values(by="timestamp", ascending=False)
+        st.dataframe(display_df, width="stretch")
     else:
         st.info("No anomalies recorded yet. Waiting for the bot to find some...")
-        
-    # Wait 5 seconds, then refresh the page
-    time.sleep(5)
-    st.rerun()
+
+# Start the live dashboard
+live_dashboard()

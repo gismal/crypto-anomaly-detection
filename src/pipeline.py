@@ -1,8 +1,3 @@
-""" Future Improvement plan:
-    1. Multiplethreading
-    2. Graceful Shutdown
-"""
-
 import time
 import threading
 from src.data_ingestion import BinanceStreamer
