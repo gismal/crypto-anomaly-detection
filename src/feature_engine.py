@@ -1,4 +1,7 @@
 import pandas as pd 
+import json
+import os
+from src.config import logger
 from collections import deque
 from typing import Dict, Optional
 from src.config import WINDOW_SIZE
@@ -37,7 +40,40 @@ class FeatureEngine:
             "rolling_mean": float(series.mean()),
             "rolling_std": float(series.std()),
             "price_change": float(self.price_history[-1] - self.price_history[0]),
-            "z_score": float((self.price_history[-1] - series.mean()) / (series.mean()) / (series.std() + 1e-8)),
+            "z_score": float((self.price_history[-1] - series.mean()) / (series.std() + 1e-8)),
             "pct_change": float(((self.price_history[-1] - self.price_history[0]) / self.price_history[0]) * 100),
             "high_low_spread": float(max(self.price_history) - min(self.price_history))
         }
+        
+    def save_state(self, file_path = "state.json"):
+        """ Converts the info on RAM into deque and saves as JSON """
+        try:
+            state_data = {
+                "price_history": list(self.price_history)
+            }
+            
+            with open(file_path, "w") as f:
+                json.dump(state_data, f)
+            logger.info(f"State has been saved: {len(self.price_history)} data")
+        except Exception as e:
+            logger.error(f"Error while saving: {e}")
+            
+    
+    def load_state(self, file_path= "state.json"):
+        """ Loads the JSON file back to the memo"""
+        if not os.path.exists(file_path):
+            logger.info("No state data, starting over")
+            return
+        
+        try:
+            with open(file_path, "r") as f:
+                state_data = json.load(f)
+                
+                saved_history = state_data.get("price_history", [])
+                for price in saved_history:
+                    self.price_history.append(price)
+                    
+                logger.info(f"State has been loaded: {len(self.price_history)} data")
+        except Exception as e:
+            logger.error(f"Error while loading: {e}")
+        

@@ -4,6 +4,7 @@
 """
 
 import time
+import threading
 from src.data_ingestion import BinanceStreamer
 from src.feature_engine import FeatureEngine
 from src.model import AnomalyDetector
@@ -23,6 +24,8 @@ def main():
     
     csv_logger = CSVLogger()
     notifier = DiscordNotifier()
+    
+    engine.load_state()
     
     # Heartbeat signal to monitor the system if it is too quite for a long time
     processed_ticks = 0
@@ -59,16 +62,17 @@ def main():
             else:
                 print(f"🔴 [ANOMALy] Price: {price:.2f} | Reason: {reason} | Score: {score:.3f}")
                 csv_logger.log(price, score, reason, features)
-                notifier.send_alert(price, reason, score)
+                threading.Thread(target= notifier.send_alert, args= (price, reason, score), daemon= True).start()
              
             # trigger the heartbeat 
             if processed_ticks % HEARTBEAT_INTERVAL ==  0:
-                notifier.send_heartbeat(processed_ticks)
+                threading.Thread(target= notifier.send_heartbeat, args= (processed_ticks,), daemon= True).start()
                     
     except KeyboardInterrupt:
         logger.info("Pipeline stops...")
     finally:
         streamer.stop()
+        engine.save_state()
 
 if __name__ == "__main__":
     main()
