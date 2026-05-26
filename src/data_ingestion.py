@@ -37,7 +37,7 @@ class BinanceStreamer:
             if 'p' in data:  
                 self.queue.put({"price": float(data['p'])})
         except Exception as e:
-            logger.error(f"Veri ayrıştırma hatası: {e}")
+            logger.error(f"Parsing error: {e}")
 
     def _on_error(self, ws, error):
         """ Callback function to handle and log WebSocket errors """
