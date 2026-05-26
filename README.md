@@ -1,8 +1,8 @@
 # 🟢🔴 Real-Time Crypto Anomaly Detection Pipeline
 
-This project is a real-time machine learning pipeline that streams live Bitcoin (BTC/USDT) trades from Binance, engineers statistical features on the fly, and detects market anomalies using Unsupervised Machine Learning. 
+This project is a real-time machine learning pipeline that streams live Bitcoin (BTC/USDT) trades from Binance, engineers statistical features on the fly, detects market anomalies using Unsupervised Machine Learning, and visualizes them on a live web dashboard.
 
-It is designed with strict **Object-Oriented Programming (OOP)** principles and includes robust pipeline mechanics like rate-limiting, dynamic model retraining, and real-time Discord alerting.
+It is designed with strict **Object-Oriented Programming (OOP)** principles and includes robust pipeline mechanics like rate-limiting, dynamic model retraining, real-time Discord alerting, and multi-currency support.
 
 ---
 
@@ -13,6 +13,7 @@ The project is divided into highly cohesive, loosely coupled modules:
 * **`FeatureEngine` (Data Engineering):** Maintains a rolling 60-second time-series window. Transforms raw prices into meaningful statistical vectors.
 * **`AnomalyDetector` (Machine Learning):** Wraps the `scikit-learn` Isolation Forest model. Handles the initial warmup phase, prediction, and periodic retraining.
 * **`DiscordNotifier` (Alerting):** Formats and dispatches critical anomaly alerts and periodic system health checks via Discord Webhooks.
+* **`Live Dashboard` (Visualization):** A Streamlit-based web app that reads the anomaly logs and displays real-time charts, KPIs, and allows dynamic currency conversion (USD, TRY, EUR, etc.).
 
 ---
 
@@ -41,7 +42,7 @@ We utilize **Isolation Forest**, an unsupervised anomaly detection algorithm, to
 
 * **Rate Limiting (Speed Bumps):** Binance WebSockets can send up to 30 ticks per second. A built-in rate limiter ensures we process exactly 1 tick per second. This prevents "micro-volatility" from destroying the standard deviation and causing false positives.
 * **System Heartbeat:** In quiet markets, a lack of alerts can look like a system failure. The pipeline includes a heartbeat mechanism that sends a "🟢 System Active" ping to Discord every 50 ticks to confirm the bot is healthy and processing data.
-* **Graceful Logging:** All anomalies are persisted locally to an `anomalies.csv` file for historical backtesting and analysis.
+* **Graceful Logging:** All anomalies are persisted locally to an `anomalies.csv` file for historical backtesting and the live web dashboard.
 
 ---
 
@@ -49,16 +50,15 @@ We utilize **Isolation Forest**, an unsupervised anomaly detection algorithm, to
 
 ### 1. Clone the repository and create a virtual environment
 ```bash
-git clone https://github.com/yourusername/crypto-anomaly-detection.git
+git clone [https://github.com/yourusername/crypto-anomaly-detection.git](https://github.com/yourusername/crypto-anomaly-detection.git)
 cd crypto-anomaly-detection
 python3 -m venv venv
 source venv/bin/activate
-```
 
 ### 2. Install dependencies
 Ensure you have the required packages installed:
 ```bash
-pip install scikit-learn websocket-client requests numpy pytest
+pip install scikit-learn websocket-client requests numpy pytest streamlit pandas plotly yfinance
 ```
 
 ### 3. Set up Discord Integration (Optional)
@@ -68,8 +68,15 @@ export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/YOUR_WEBHOOK_URL"
 ```
 
 ### 4. Run the Pipeline
+You will need two terminal windows for this:
+#### Terminal 1 (Start the Data Bot)
 ```bash
 PYTHONPATH=. python src/pipeline.py
 ```
 
 *Note: Upon startup, the bot will display "Pipeline has been initiated..." and will silently collect data for the first 60 seconds (Warmup Phase) before outputting normal/anomaly predictions.*
+#### Terminal 2 (Start the Live Dashboard)
+```bash
+streamlit run app.py
+```
+This will open the real-time monitoring interafce in your browser, complete with live charts and dynamic currency conversion.
