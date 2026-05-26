@@ -64,8 +64,20 @@ def live_dashboard():
         kpi1.metric(label="Total Anomalies", value=len(df))
         
         symbol = currency_symbols.get(currency, "$")
-        kpi2.metric(label=f"Latest Price ({currency})", value=f"{symbol}{latest_anomaly['price']:.2f}")
-        kpi3.metric(label="Latest Score", value=f"{latest_anomaly['prediction_score']:.4f}")
+        
+        # calculate delta
+        delta_price = recent_df["price"].diff().iloc[-1]
+        delta_str = f"{symbol}{delta_price:,.2f}" if pd.notna(delta_price) else None
+        
+        kpi2.metric(
+            label=f"Latest Price ({currency})",
+            value=f"{symbol}{latest_anomaly['price']:.2f}",
+            delta = delta_str
+            )
+        kpi3.metric(
+            label="Latest Score",
+            value=f"{latest_anomaly['prediction_score']:.4f}"
+            )
         st.markdown("---")
         
         # 2. Chart
