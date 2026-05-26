@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 import os
 
 st.set_page_config(page_title= "Crypto Anomaly Dashboard", layout= "wide")
@@ -39,13 +40,20 @@ def live_dashboard():
         
         # 2. Chart
         st.subheader("Anomaly Price Chart")
-        chart_data = recent_df.set_index("timestamp")["price"]
-        st.line_chart(chart_data)
+        fig = px.line(
+            recent_df,
+            x = "timestamp",
+            y = "price",
+            hover_data = ["prediction_score", "reason"],
+            markers = True
+        )
+        fig.update_layout(xaxis_title = "Time", yaxis_title = "Price ($)")
+        st.plotly_chart(fig)
         
         # 3. Table
-        st.subheader("Recent Anomalies")
-        display_df = recent_df.sort_values(by="timestamp", ascending=False)
-        st.dataframe(display_df, width="stretch")
+        with st.expander("View Recent Anomalies Data", expanded = False):
+            display_df = recent_df.sort_values(by="timestamp", ascending=False)
+            st.dataframe(display_df, width="stretch")
     else:
         st.info("No anomalies recorded yet. Waiting for the bot to find some...")
 
