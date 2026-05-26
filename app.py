@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import os
+import yfinance as yf
 
 st.set_page_config(page_title= "Crypto Anomaly Dashboard", layout= "wide")
 st.title("Live Crypto Anomaly Monitor")
@@ -22,19 +23,48 @@ def load_data():
     except Exception:
         # Return an empty DataFrame if something goes wrong
         return pd.DataFrame()
+    
+@st.cache_data(ttl=3600, show_spinner= False)
+def get_exchange_rate(currency: str) -> float:
+    """ Fetches the latest USD exchange rate for a given currency """
+    if currency == "USD":
+        return 1.0
+    
+    try:
+        df = yf.Ticker(f"USD{currency}=X").history(period = "1d")
+        return float(df["Close"].iloc[-1]) if not df.empty else 1.0
+    except Exception:
+        return 1.0  
 
 # This fragment updates itself every 5 secs dynamically    
 @st.fragment(run_every= 5)
 def live_dashboard():
+    # Popular Currencies and their symbols dictionary
+    currency_symbols = {
+        "USD": "$",
+        "TRY": "₺",
+        "EUR": "€",
+        "GBP": "£",
+        "JPY": "¥",
+        "CAD": "C$",
+        "AUD": "A$"
+    }
+    currency = st.selectbox("Select Currency", list(currency_symbols.keys()))
+    rate = get_exchange_rate(currency)
+        
     df = load_data()
     if not df.empty:
+        df["price"] = df["price"] * rate
+
         recent_df = df.tail(100)
         latest_anomaly = df.iloc[-1]
         
         # KPI Metrics
         kpi1, kpi2, kpi3 = st.columns(3)
         kpi1.metric(label="Total Anomalies", value=len(df))
-        kpi2.metric(label="Latest Price", value=f"${latest_anomaly['price']:.2f}")
+        
+        symbol = currency_symbols.get(currency, "$")
+        kpi2.metric(label=f"Latest Price ({currency})", value=f"{symbol}{latest_anomaly['price']:.2f}")
         kpi3.metric(label="Latest Score", value=f"{latest_anomaly['prediction_score']:.4f}")
         st.markdown("---")
         
@@ -47,7 +77,7 @@ def live_dashboard():
             hover_data = ["prediction_score", "reason"],
             markers = True
         )
-        fig.update_layout(xaxis_title = "Time", yaxis_title = "Price ($)")
+        fig.update_layout(xaxis_title = "Time", yaxis_title = f"Price ({currency})")
         st.plotly_chart(fig)
         
         # 3. Table
